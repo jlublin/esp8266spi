@@ -1,0 +1,44 @@
+Version 1.0
+
+wifi_ap
+===========
+SSID[32]
+key[64]
+ip [4]									(AP ONLY)
+netmask [4]								(AP ONLY)
+gateway [4]								(AP ONLY)
+dhcp_lease_start [4]					(AP ONLY)
+dhcp_lease_end [4]						(AP ONLY)
+cfg1 [2:auth 2:mode 4:channel]			(AP ONLY)
+cfg2 [1: ap/sta 1:ssid_hidden(AP) 2:max_connections(AP)]
+beacon_interval[2]						(AP ONLY)
+csr [1:enable 1:ready 1:dhcp_enable(AP) 1:dhcp_ready(AP)]
+
+sockets[4] (tcp/udp?)
+==========
+remote_ip[4]
+remote_port[2]
+local_port[2]
+cfg [1: protocol 1:cfg]
+csr [1: connect 1: ready 4: error 1:rx_not_empty 1:tx_empty]
+(timeout?)
+(ssl_auth)
+(ssl_cert[64?])
+Errors: timeout, rejected, dropped, rx_overflow, tx_overflow, auth_error, out_of_mem
+
+
+listen on one port, on connection (do what?)
+listener[4]
+===========
+port[2]
+csr [1: enable 1:ready]
+
+(flags)
+=====
+flags
+interrupts_enable
+
+debug (can use debug uart instead)
+=====
+socket
+csr [1: enable]
