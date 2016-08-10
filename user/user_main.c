@@ -38,16 +38,8 @@ void ICACHE_FLASH_ATTR user_init()
 	os_printf("\nDebug: Starting SPI test ESP8266++++\n");
 
     /* Start uart task */
-	system_os_task(run_main_task, 1, uart_task_queue, 2);
+	system_os_task(run_main_task, 2, spi_task_queue, 1);
 
 	/* Start SPI Slave */
-	spi_test_init();
-
-	/* Start main timer */
-
-	static volatile os_timer_t epc_main_timer;
-	os_timer_setfn(&epc_main_timer, (os_timer_func_t *)run_main_task, NULL);
-	os_timer_arm(&epc_main_timer, 1000, 1);
-
-	system_os_post(2, 0, 0);
+	spi_init();
 }

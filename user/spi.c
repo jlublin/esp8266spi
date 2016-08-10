@@ -51,9 +51,7 @@ void spi_slave_init(uint8 spi_no)
 
 //////**************RUN WHEN SLAVE RECIEVE*******************///////
    // tow lines below is to configure spi timing.
-    SET_PERI_REG_MASK(SPI_CTRL2(spi_no), (0x2 & SPI_MOSI_DELAY_NUM) << SPI_MOSI_DELAY_NUM_S); // delay num
-
-    os_printf("SPI_CTRL2 is %08x\n", READ_PERI_REG(SPI_CTRL2(spi_no)));
+//    SET_PERI_REG_MASK(SPI_CTRL2(spi_no), (0x2 & SPI_MOSI_DELAY_NUM) << SPI_MOSI_DELAY_NUM_S); // delay num
 
     WRITE_PERI_REG(SPI_CLOCK(spi_no), 0);
     
@@ -73,6 +71,10 @@ void spi_slave_init(uint8 spi_no)
                                           ((0x7 & SPI_SLV_WR_ADDR_BITLEN) << SPI_SLV_WR_ADDR_BITLEN_S) |
                                           ((0x7 & SPI_SLV_RD_ADDR_BITLEN) << SPI_SLV_RD_ADDR_BITLEN_S));
 
+	os_printf("SPI_CLOCK is %08x\n", READ_PERI_REG(SPI_CLOCK(spi_no)));
+	os_printf("SPI_CTRL is %08x\n", READ_PERI_REG(SPI_CTRL(spi_no)));
+	os_printf("SPI_CTRL2 is %08x\n", READ_PERI_REG(SPI_CTRL2(spi_no)));
+    os_printf("SPI_USER is 0x%08x\n", READ_PERI_REG(SPI_USER(spi_no)));
     os_printf("SPI_USER1 is 0x%08x\n", READ_PERI_REG(SPI_USER1(spi_no)));
     os_printf("SPI_USER2 is 0x%08x\n", READ_PERI_REG(SPI_USER2(spi_no)));
     os_printf("SPI_SLAVE is 0x%08x\n", READ_PERI_REG(SPI_SLAVE(spi_no)));
@@ -147,7 +149,8 @@ void spi_slave_isr_handler(void *param)
 	{ //bit7 is for hspi isr,
 		uint32 intflags = READ_PERI_REG(SPI_SLAVE(HSPI));
 
-		/* Clear interrupt enable flags, is this needed? */
+		/* Clear interrupt enable flags, is this needed? Works very fine without it */
+#if 0
 		CLEAR_PERI_REG_MASK(SPI_SLAVE(HSPI),  
 							SPI_TRANS_DONE_EN |
 							SPI_SLV_WR_STA_DONE_EN |
@@ -157,8 +160,9 @@ void spi_slave_isr_handler(void *param)
 
 		/* Synchronous reset of peripheral, is this needed? */
 		SET_PERI_REG_MASK(SPI_SLAVE(HSPI), SPI_SYNC_RESET);
-
-		/* Clear and then set interrupt enable flags, is this needed? */
+#endif
+#if 1
+		/* Clear and then set interrupt enable flags, is this needed? Doesn't work without it, clears irqs?*/
 		CLEAR_PERI_REG_MASK(SPI_SLAVE(HSPI),
 							SPI_TRANS_DONE |
 							SPI_SLV_WR_STA_DONE |
@@ -172,7 +176,7 @@ void spi_slave_isr_handler(void *param)
 							SPI_SLV_RD_STA_DONE_EN |
 							SPI_SLV_WR_BUF_DONE_EN |
 							SPI_SLV_RD_BUF_DONE_EN);
-
+#endif
 		/* Interrupt due to write to buffer done */
 		if(intflags & SPI_SLV_WR_BUF_DONE)
 		{
@@ -180,7 +184,7 @@ void spi_slave_isr_handler(void *param)
 			while(idx < 8)
 			{
 				uint32 recv_data = READ_PERI_REG(SPI_W0(HSPI) + (idx << 2));
-/* TODO ############################## Ordering ??? (LSB/MSB) */
+
 				spi_data[idx << 2] = recv_data & 0xff;
 				spi_data[(idx << 2) + 1] = (recv_data >> 8) & 0xff;
 				spi_data[(idx << 2) + 2] = (recv_data >> 16) & 0xff;
@@ -188,37 +192,37 @@ void spi_slave_isr_handler(void *param)
 				idx++;
 			}
 
-			os_printf("WR Done\n");
+			DEBUG_PRINTF("WR Done\n");
 			disp_spi_data();
 		}
 
 		/* Interrupt due to read from buffer done */
 		if(intflags & SPI_SLV_RD_BUF_DONE)
 		{
-			os_printf("RD Done\n");
-//			set_miso_test_data();
+			DEBUG_PRINTF("RD Done\n");
+
 			WRITE_PERI_REG(SPI_RD_STATUS(HSPI), 0xdeadbeef);
-			os_printf("Status RD: %p\n", READ_PERI_REG(SPI_RD_STATUS(HSPI)));
-			os_printf("Status WR: %p\n", READ_PERI_REG(SPI_WR_STATUS(HSPI)));
+			DEBUG_PRINTF("Status RD: %p\n", READ_PERI_REG(SPI_RD_STATUS(HSPI)));
+			DEBUG_PRINTF("Status WR: %p\n", READ_PERI_REG(SPI_WR_STATUS(HSPI)));
 		}
 
 		/* Interrupt due to read from status done */
 		if(intflags & SPI_SLV_RD_STA_DONE)
 		{
-			os_printf("RD STA Done\n");
-			os_printf("Status RD: %p\n", READ_PERI_REG(SPI_RD_STATUS(HSPI)));
-			os_printf("Status WR: %p\n", READ_PERI_REG(SPI_WR_STATUS(HSPI)));
+			DEBUG_PRINTF("RD STA Done\n");
+			DEBUG_PRINTF("Status RD: %p\n", READ_PERI_REG(SPI_RD_STATUS(HSPI)));
+			DEBUG_PRINTF("Status WR: %p\n", READ_PERI_REG(SPI_WR_STATUS(HSPI)));
 		}
 
 		/* Interrupt due to write to status done */
 		if(intflags & SPI_SLV_WR_STA_DONE)
 		{
-			os_printf("WR STA Done\n");
-			os_printf("Status RD: %p\n", READ_PERI_REG(SPI_RD_STATUS(HSPI)));
-			os_printf("Status WR: %p\n", READ_PERI_REG(SPI_WR_STATUS(HSPI)));
+			DEBUG_PRINTF("WR STA Done\n");
+			DEBUG_PRINTF("Status RD: %p\n", READ_PERI_REG(SPI_RD_STATUS(HSPI)));
+			DEBUG_PRINTF("Status WR: %p\n", READ_PERI_REG(SPI_WR_STATUS(HSPI)));
 
 			uint32 val = READ_PERI_REG(SPI_WR_STATUS(HSPI));
-			os_printf("Cmd: %d Arg1: %d Arg2: %d\n",
+			DEBUG_PRINTF("Cmd: %d Arg1: %d Arg2: %d\n",
 			          (val >> 28),
 			          (val >> 24) & 0xf,
 			          (val >> 16) & 0xff);
@@ -226,18 +230,29 @@ void spi_slave_isr_handler(void *param)
 			if((val >> 28) == 0x01) /* READ_REG */
 			{
 				uint8 addr = (val >> 16) & 0xff;
-				os_printf("READ_REG(%x): %x\n", addr, esp_registers[addr]);
+				DEBUG_PRINTF("READ_REG(%x): %x\n", addr, esp_registers.v[addr]);
 
-				WRITE_PERI_REG(SPI_W8(HSPI), esp_registers[addr]);
+				WRITE_PERI_REG(SPI_W8(HSPI), esp_registers.v[addr]);
 
 				WRITE_PERI_REG(SPI_WR_STATUS(HSPI), 0); /* Clear to tell all done and length */
 			}
 			else if((val >> 28) == 0x02) /* WRITE_REG */
 			{
 				uint8 addr = (val >> 16) & 0xff;
-				uint32 val = esp_registers[addr] = READ_PERI_REG(SPI_W0(HSPI));
+				uint32 val = esp_registers.v[addr] = READ_PERI_REG(SPI_W0(HSPI));
 
-				os_printf("WRITE_REG(%x): %x\n", addr, val);
+				/* TODO, should we stash all csr at register address 0-csr? */
+				if(addr == 30) /* WiFi CSR */
+				{
+					system_os_post(2, 0, 0);
+				}
+
+				else if(addr == 35) /* Socket[0] CSR */
+				{
+					system_os_post(2, 0, 0);
+				}
+
+				DEBUG_PRINTF("WRITE_REG(%x): %x\n", addr, val);
 
 				WRITE_PERI_REG(SPI_WR_STATUS(HSPI), 0); /* Clear to tell all done and length */
 			}
@@ -276,7 +291,7 @@ void ICACHE_FLASH_ATTR disp_spi_data()
 	uint8 i = 0;
 	for(i = 0; i < 8; i++)
 	{
-		os_printf("data %d : 0x%02x 0x%02x 0x%02x 0x%02x\n\r", i,
+		DEBUG_PRINTF("data %d : 0x%02x 0x%02x 0x%02x 0x%02x\n\r", i,
 		                                  spi_data[4*i + 0],
 		                                  spi_data[4*i + 1],
 		                                  spi_data[4*i + 2],
@@ -284,12 +299,12 @@ void ICACHE_FLASH_ATTR disp_spi_data()
 	}
 }
 
-void ICACHE_FLASH_ATTR spi_test_init()
+void ICACHE_FLASH_ATTR spi_init()
 {
-	os_printf("spi init\n\r");
+	DEBUG_PRINTF("spi init\n\r");
 	spi_slave_init(HSPI);
 
-	os_printf("spi miso init\n\r");
+	DEBUG_PRINTF("spi miso init\n\r");
 	set_miso_test_data();
-	os_printf("spi init done\n\r");
+	DEBUG_PRINTF("spi init done\n\r");
 }
