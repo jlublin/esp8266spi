@@ -109,7 +109,7 @@ void spi_slave_init(uint8 spi_no)
 static uint8 spi_data[32] = {0};
 
 /*
- * SPI protocol (Only WRSTA available, why?)
+ * SPI protocol (Only WRSTA available, TODO: why?)
  * 1. (Write argument data into WRBUF)
  * 2. Write command into WRSTA
  * 3. Read status from WRSTA until command complete
@@ -131,8 +131,8 @@ static uint8 spi_data[32] = {0};
  * RESET     | 0x0
  * READ_REG  | 0x1 | - | 0-255 (addr) <-- 0 | 4 | <4 data>
  * WRITE_REG | 0x2 | - | 0-255 (addr) --> <4 data>
- * LOAD_BUF  | 0x3 | 0-15 (fifo#) | 1-64 <-- 0 | 1-64 | <1-64 data>
- * STORE_BUF | 0x4 | 0-15 (fifo#) | 1-64 --> <1-64 data>
+ * READ_BUF  | 0x3 | 0-15 (fifo#) | 1-64 <-- 0 | 1-64 | <1-64 data>
+ * WRITE_BUF | 0x4 | 0-15 (fifo#) | 1-64 --> <1-64 data>
  * BIT_MODIFY?
  * STATUS? (Some general status, most importantly interrupt status)
  *
@@ -244,17 +244,26 @@ void spi_slave_isr_handler(void *param)
 				/* TODO, should we stash all csr at register address 0-csr? */
 				if(addr == 30) /* WiFi CSR */
 				{
-					system_os_post(2, 0, 0);
+					system_os_post(2, 0, SIG_CSR);
 				}
 
 				else if(addr == 35) /* Socket[0] CSR */
 				{
-					system_os_post(2, 0, 0);
+					system_os_post(2, 0, SIG_CSR);
 				}
 
 				DEBUG_PRINTF("WRITE_REG(%x): %x\n", addr, val);
 
 				WRITE_PERI_REG(SPI_WR_STATUS(HSPI), 0); /* Clear to tell all done and length */
+			}
+			else if((val >> 28) == 0x03) /* READ_BUF */
+			{
+				system_os_post(2, SIG_READ_BUF, val); /* TODO Separate thread? */
+				/* Semaphore, only allow one request at a time? Or what is the effect of multiple requests? */
+			}
+			else if((val >> 28) == 0x04)
+			{
+				system_os_post(2, SIG_WRITE_BUF, val); /* TODO Separate thread? */
 			}
 		}
 	}

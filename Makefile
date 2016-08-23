@@ -21,7 +21,7 @@ FW_BASE		= firmware
 XTENSA_TOOLS_ROOT ?= /home/joachim/Projects/ESP8266/esp-open-sdk/xtensa-lx106-elf/bin
 
 # base directory of the ESP8266 SDK package, absolute
-SDK_BASE	?= /home/joachim/Projects/ESP8266/esp-open-sdk/esp_iot_sdk_v1.3.0
+SDK_BASE	?= /home/joachim/Projects/ESP8266/esp-open-sdk/ESP8266_NONOS_SDK_V1.5.4_16_05_20
 
 # esptool.py path and port
 ESPTOOL		?= esptool.py
@@ -35,10 +35,10 @@ MODULES		= driver user
 EXTRA_INCDIR    = include
 
 # libraries used in this project, mainly provided by the SDK
-LIBS		= c gcc hal pp phy net80211 lwip wpa main at smartconfig
+LIBS		= c gcc hal pp phy net80211 lwip wpa main at smartconfig ssl wps airkiss
 
 # compiler flags using during compilation of source files
-CFLAGS		= -std=c99 -Os -g -O2 -Wpointer-arith -Wundef -Werror -Wl,-EL -fno-inline-functions -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DICACHE_FLASH
+CFLAGS		= -std=c99 -Os -g -O2 -Wpointer-arith -Wundef -Wno-implicit -Werror -Wl,-EL -fno-inline-functions -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DICACHE_FLASH
 CXXFLAGS	= $(CFLAGS) -fno-rtti -fno-exceptions
 
 # linker flags used to generate the main object file
@@ -55,7 +55,7 @@ SDK_INCDIR	= include include/json
 # we create two different files for uploading into the flash
 # these are the names and options to generate them
 FW_FILE_1_ADDR	= 0x00000
-FW_FILE_2_ADDR	= 0x40000
+FW_FILE_2_ADDR	= 0x10000
 
 # select which tools to use as compiler, librarian and linker
 CC		:= $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-gcc

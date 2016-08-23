@@ -4,11 +4,12 @@
 #include <stdint.h>
 #include "os_type.h"
 
-//extern uint32 esp_registers[256];
-extern uint8 fifo[4096][2];
-
 extern os_event_t spi_task_queue[2];
 void run_main_task(os_event_t *events);
+
+static const uint32_t SIG_CSR = 0;
+static const uint32_t SIG_READ_BUF = 1;
+static const uint32_t SIG_WRITE_BUF = 2;
 
 void wifi_enable();
 void wifi_disable();
@@ -18,6 +19,7 @@ void dhcp_disable();
 
 void socket_enable(int i);
 void socket_disable(int i);
+void socket_send_data(int socket);
 
 #define IPv4_ADDR(a,b,c,d) \
 				((uint32)((d) & 0xff) << 24) | \
@@ -63,6 +65,12 @@ struct socket
 static const int SOCKET_PORTS_LOCAL = 16;
 static const int SOCKET_PORTS_REMOTE = 0;
 
+struct interrupts
+{
+	uint32_t interrupts;
+	uint32_t interrupt_mask;
+};
+
 typedef union
 {
 	struct
@@ -75,5 +83,17 @@ typedef union
 } esp_registers_t;
 
 extern esp_registers_t esp_registers;
+
+/* Simple FIFO structure, start == end => empty, start == end + 1 -> full (mod len) */
+struct fifo /* TODO: fifos with 32-bit ints (performance) */
+{
+	uint8_t data[256];
+	uint16_t start;
+	uint16_t end;
+};
+
+/* Socket FIFOs */
+extern struct fifo socket_send_fifo[4];
+extern struct fifo socket_recv_fifo[4];
 
 #endif

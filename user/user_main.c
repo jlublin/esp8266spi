@@ -30,8 +30,9 @@ void ICACHE_FLASH_ATTR user_init()
 	uart_init(74880, 115200);
 	os_install_putc1((void *)uart1_write_char);
 
-	/* Disable logging to uart */
-//	system_set_os_print(0);
+	/* Disable auto connect */
+	if(wifi_station_get_auto_connect())
+		wifi_station_set_auto_connect(0);
 
 	/* Print start message */
 	ets_printf("\nStarting SPI test ESP8266++++\n");
