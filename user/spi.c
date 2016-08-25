@@ -139,7 +139,7 @@ static uint8 spi_data[32] = {0};
  * WRITE_REG | 0x2 | - | 0-255 (addr) --> <4 data>
  * READ_BUF  | 0x3 | 0-15 (fifo#) | 1-64 <-- 0 | 1-64 | <1-64 data>
  * WRITE_BUF | 0x4 | 0-15 (fifo#) | 1-64 --> <1-64 data>
- * BIT_MODIFY?
+ * BIT_MODIFY| 0x5 | - | 0-255 (addr) --> <4 set mask> <4 clear mask>
  * STATUS? (Some general status, most importantly interrupt status)
  *
  */
@@ -283,6 +283,10 @@ void spi_slave_isr_handler(void *param)
 			else if((val >> 28) == 0x04)
 			{
 				system_os_post(2, SIG_WRITE_BUF, val); /* TODO Separate thread? */
+			}
+			else if((val >> 28) == 0x05)
+			{
+				/* TODO */
 			}
 		}
 	}
