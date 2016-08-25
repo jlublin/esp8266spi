@@ -36,11 +36,17 @@ void spi_slave_init(uint8 spi_no)
     // regvalue = READ_PERI_REG(SPI_FLASH_SLAVE(spi_no));
     // slave mode, slave use buffers which are register "SPI_FLASH_C0~C15", enable trans done isr
     // set bit 30 bit 29 bit9, bit9 is trans done isr mask
-    SET_PERI_REG_MASK(	SPI_SLAVE(spi_no), 
-    					SPI_SLAVE_MODE | SPI_SLV_WR_RD_BUF_EN |
-                        SPI_SLV_WR_BUF_DONE_EN | SPI_SLV_RD_BUF_DONE_EN |
-                        SPI_SLV_WR_STA_DONE_EN | SPI_SLV_RD_STA_DONE_EN |
-                        SPI_TRANS_DONE_EN);
+    SET_PERI_REG_MASK(
+		SPI_SLAVE(spi_no),
+		SPI_SLAVE_MODE |
+#ifdef DEBUG
+		SPI_SLV_RD_STA_DONE_EN |
+		SPI_SLV_WR_BUF_DONE_EN |
+		SPI_SLV_RD_BUF_DONE_EN |
+		SPI_SLV_WR_RD_BUF_EN |
+		SPI_TRANS_DONE_EN |
+#endif
+		SPI_SLV_WR_STA_DONE_EN);
 
     // disable general trans intr 
     // CLEAR_PERI_REG_MASK(SPI_SLAVE(spi_no),SPI_TRANS_DONE_EN);
@@ -149,9 +155,12 @@ void spi_slave_isr_handler(void *param)
 	{ //bit7 is for hspi isr,
 		uint32 intflags = READ_PERI_REG(SPI_SLAVE(HSPI));
 
-		/* Clear interrupt enable flags, is this needed? Works very fine without it */
+		/*
+		 * Clear interrupt enable flags, is this needed?
+		 * Works very fine without it
+		 */
 #if 0
-		CLEAR_PERI_REG_MASK(SPI_SLAVE(HSPI),  
+		CLEAR_PERI_REG_MASK(SPI_SLAVE(HSPI),
 							SPI_TRANS_DONE_EN |
 							SPI_SLV_WR_STA_DONE_EN |
 							SPI_SLV_RD_STA_DONE_EN |
@@ -162,7 +171,10 @@ void spi_slave_isr_handler(void *param)
 		SET_PERI_REG_MASK(SPI_SLAVE(HSPI), SPI_SYNC_RESET);
 #endif
 #if 1
-		/* Clear and then set interrupt enable flags, is this needed? Doesn't work without it, clears irqs?*/
+		/*
+		 * Clear interrupt flags and then set interrupt enable flags.
+		 * TODO: Is set interrupt enable really needed?
+		 */
 		CLEAR_PERI_REG_MASK(SPI_SLAVE(HSPI),
 							SPI_TRANS_DONE |
 							SPI_SLV_WR_STA_DONE |
@@ -170,13 +182,19 @@ void spi_slave_isr_handler(void *param)
 							SPI_SLV_WR_BUF_DONE |
 							SPI_SLV_RD_BUF_DONE);
 
-		SET_PERI_REG_MASK(SPI_SLAVE(HSPI),
-							SPI_TRANS_DONE_EN |
-							SPI_SLV_WR_STA_DONE_EN |
-							SPI_SLV_RD_STA_DONE_EN |
-							SPI_SLV_WR_BUF_DONE_EN |
-							SPI_SLV_RD_BUF_DONE_EN);
+		SET_PERI_REG_MASK(
+			SPI_SLAVE(HSPI),
+			SPI_SLV_WR_STA_DONE_EN |
+#ifdef DEBUG
+			SPI_TRANS_DONE_EN |
+			SPI_SLV_RD_STA_DONE_EN |
+			SPI_SLV_WR_BUF_DONE_EN |
+			SPI_SLV_RD_BUF_DONE_EN |
 #endif
+			0);
+#endif
+
+#ifdef DEBUG
 		/* Interrupt due to write to buffer done */
 		if(intflags & SPI_SLV_WR_BUF_DONE)
 		{
@@ -200,8 +218,6 @@ void spi_slave_isr_handler(void *param)
 		if(intflags & SPI_SLV_RD_BUF_DONE)
 		{
 			DEBUG_PRINTF("RD Done\n");
-
-			WRITE_PERI_REG(SPI_RD_STATUS(HSPI), 0xdeadbeef);
 			DEBUG_PRINTF("Status RD: %p\n", READ_PERI_REG(SPI_RD_STATUS(HSPI)));
 			DEBUG_PRINTF("Status WR: %p\n", READ_PERI_REG(SPI_WR_STATUS(HSPI)));
 		}
@@ -213,6 +229,7 @@ void spi_slave_isr_handler(void *param)
 			DEBUG_PRINTF("Status RD: %p\n", READ_PERI_REG(SPI_RD_STATUS(HSPI)));
 			DEBUG_PRINTF("Status WR: %p\n", READ_PERI_REG(SPI_WR_STATUS(HSPI)));
 		}
+#endif
 
 		/* Interrupt due to write to status done */
 		if(intflags & SPI_SLV_WR_STA_DONE)
@@ -222,10 +239,12 @@ void spi_slave_isr_handler(void *param)
 			DEBUG_PRINTF("Status WR: %p\n", READ_PERI_REG(SPI_WR_STATUS(HSPI)));
 
 			uint32 val = READ_PERI_REG(SPI_WR_STATUS(HSPI));
+
 			DEBUG_PRINTF("Cmd: %d Arg1: %d Arg2: %d\n",
 			          (val >> 28),
 			          (val >> 24) & 0xf,
 			          (val >> 16) & 0xff);
+
 
 			if((val >> 28) == 0x01) /* READ_REG */
 			{
